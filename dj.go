@@ -4,6 +4,8 @@ import (
   "fmt"
   "os"
   "log"
+  "encoding/json"
+  "net/http"
 
   "github.com/gorilla/mux"
   "github.com/jinzhu/gorm"
@@ -71,8 +73,67 @@ func main () {
   //Api routes
   router := mux.NewRouter()
 
+
   //Get Route
   router.HandleFunc("/previousGigs", getPreviousGigs).Methods("GET")
 
-  //Get Function
+
+  //Get a single object
+  router.HandleFunc("/previousGig/{id}", getPreviousGig).Methods("GET")
+
+  //Create route
+  router.HandleFunc("/create/previousGigs", createPreviousGigs).Methods("POST")
+
+  //Delete route
+  router.HandleFunc("/delete/previousGig/{id}", deletePreviousGigs).Methods("DELETE")
+
+
+
+  //Connect to server
+  log.Fatal(http.ListenAndServe(":8080", router))
 }
+
+  //API Controllers
+  //Get Function
+  func getPreviousGigs(w http.ResponseWriter, r *http.Request) {
+    var previousGigs []PreviousGigs
+
+    db.Find(&previousGigs)
+
+    json.NewEncoder(w).Encode(&previousGigs)
+  }
+
+  func getPreviousGig(w http.ResponseWriter, r *http.Request) {
+    params := mux.Vars(r)
+
+    var gig PreviousGigs
+
+    db.First(&gig, params["id"])
+
+    json.NewEncoder(w).Encode(gig)
+  }
+
+  func createPreviousGigs(w http.ResponseWriter, r *http.Request) {
+    var previousGigs PreviousGigs
+    json.NewDecoder(r.Body).Decode(&previousGigs)
+
+    createdPreviousGigs := db.Create(&previousGigs)
+    err = createdPreviousGigs.Error
+    if err != nil {
+      json.NewEncoder(w).Encode(err)
+    } else {
+      json.NewEncoder(w).Encode(&previousGigs)
+    }
+  }
+
+  //Delete
+  func deletePreviousGigs(w http.ResponseWriter,r *http.Request) {
+    params := mux.Vars(r)
+
+    var previousGigs PreviousGigs
+
+    db.First(&previousGigs, params["id"])
+    db.Delete(&previousGigs)
+
+    json.NewEncoder(w).Encode(&previousGigs)
+  }
