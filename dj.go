@@ -4,9 +4,12 @@ import (
   "fmt"
   "os"
   "log"
+  "encoding/json"
+  "net/http"
 
   "github.com/gorilla/mux"
   "github.com/jinzhu/gorm"
+  "github.com/gorilla/handlers"
   _ "github.com/jinzhu/gorm/dialects/postgres"
 )
 
@@ -32,6 +35,8 @@ var (
   //Globally declared varialbes
 var db *gorm.DB
 var err error
+
+
 
 
 func main () {
@@ -71,8 +76,101 @@ func main () {
   //Api routes
   router := mux.NewRouter()
 
+
   //Get Route
   router.HandleFunc("/previousGigs", getPreviousGigs).Methods("GET")
 
+
+  //Get a single object
+  router.HandleFunc("/previousGig/{id}", getPreviousGig).Methods("GET")
+
+  //Create route
+  router.HandleFunc("/previousGigs", createPreviousGigs).Methods("POST")
+
+  //Delete route
+  router.HandleFunc("/previousGig/{id}", deletePreviousGigs).Methods("DELETE")
+
+  //Update route
+  router.HandleFunc("/previousGig/{id}", updateGig).Methods("PUT")
+
+  //Enable CORS
+  headers := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization"})
+  methods := handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE"})
+  origins := handlers.AllowedOrigins([]string{"*"})
+
+  //Connect to server
+  log.Fatal(http.ListenAndServe(":8080", handlers.CORS(headers, methods, origins)(router)))
+  }
+
+  // respondJSON makes the response with payload as json format
+  func respondJSON(w http.ResponseWriter, status int, payload interface{}) {
+
+      response, err := json.Marshal(payload)
+        if err != nil {
+          w.WriteHeader(http.StatusInternalServerError)
+          w.Write([]byte(err.Error()))
+          return
+    }
+        w.WriteHeader(status)
+        w.Write([]byte(response))
+    }
+
+// respondError makes the error response with payload as json format
+  func respondError(w http.ResponseWriter, code int, message string) {
+      respondJSON(w, code, map[string]string{"error": message})
+    }
+
+
+  //API Controllers
   //Get Function
-}
+  func getPreviousGigs(w http.ResponseWriter, r *http.Request) {
+
+    var previousGigs []PreviousGigs
+
+    db.Find(&previousGigs)
+
+    json.NewEncoder(w).Encode(&previousGigs)
+  }
+
+  func getPreviousGig(w http.ResponseWriter, r *http.Request) {
+
+    params := mux.Vars(r)
+
+    var gig PreviousGigs
+
+    db.First(&gig, params["id"])
+
+    json.NewEncoder(w).Encode(gig)
+  }
+
+  func createPreviousGigs(w http.ResponseWriter, r *http.Request) {
+    var previousGigs PreviousGigs
+    json.NewDecoder(r.Body).Decode(&previousGigs)
+
+    createdPreviousGigs := db.Create(&previousGigs)
+    err = createdPreviousGigs.Error
+    if err != nil {
+      json.NewEncoder(w).Encode(err)
+    } else {
+      json.NewEncoder(w).Encode(&previousGigs)
+    }
+  }
+
+  //Update
+  func updateGig(w http.ResponseWriter, r *http.Request) {
+    params := mux.Vars(r)
+    var previousGigs PreviousGigs
+    db.First(&previousGigs, params["id"])
+    json.NewDecoder(r.Body).Decode(&previousGigs)
+    db.Save(&previousGigs)
+    json.NewEncoder(w).Encode(previousGigs)
+  }
+
+
+  //Delete
+  func deletePreviousGigs(w http.ResponseWriter,r *http.Request) {
+    params := mux.Vars(r)
+    var previousGigs PreviousGigs
+    db.Delete(&previousGigs, params["id"])
+    json.NewEncoder(w).Encode(&previousGigs)
+  }
