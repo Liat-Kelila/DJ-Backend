@@ -49,12 +49,13 @@ func main () {
     password := os.Getenv("PASSWORD")
 
     // Database connection string
-    dbURI := fmt.Sprintf("host=%s user=%s dbname=%s sslmode=disable password=%s port=%s", host, user, dbName, password, dbPort)
+    // dbURI := fmt.Sprintf("host=%s user=%s dbname=%s sslmode=disable password=%s port=%s", host, user, dbName, password, dbPort)
 
+    dbURI := postgres://obqsbjrxwcyqjq:62e0ead0553e1f53b5a699ae1aa400b82c4626dd76abad4f0a3d74127f9f39c8@ec2-23-20-140-229.compute-1.amazonaws.com:5432/ddblm95hab27e3
 
 
   // Opening connection to Database
-    db, err = gorm.Open(dialect, dbURI)
+    db, err = gorm.Open(dialect, os.Getenv("dbURI")
     if err != nil {
        log.Fatal(err)
     } else {
