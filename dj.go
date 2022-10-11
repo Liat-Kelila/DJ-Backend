@@ -7,6 +7,7 @@ import (
   "encoding/json"
   "net/http"
 
+  "github.com/joho/godotenv"
   "github.com/gorilla/mux"
   "github.com/jinzhu/gorm"
   "github.com/gorilla/handlers"
@@ -40,6 +41,23 @@ var err error
 
 
 func main () {
+
+    e := godotenv.Load()
+    if e != nil {
+      fmt.Print(e)
+    }
+
+    port := os.Getenv("PORT")
+    if port == "" {
+      port = "8000"
+    }
+
+    fmt.Println(port)
+
+    //Api routes
+    router := mux.NewRouter()
+
+
     // Loading environment variables
     dialect := os.Getenv("DIALECT")
     host := os.Getenv("HOST")
@@ -47,14 +65,17 @@ func main () {
     user := os.Getenv("USER")
     dbName := os.Getenv("NAME")
     password := os.Getenv("PASSWORD")
+    // port := os.Getenv("PORT")
 
     // Database connection string
-    // dbURI := fmt.Sprintf("host=%s user=%s dbname=%s sslmode=disable password=%s port=%s", host, user, dbName, password, dbPort)
+    dbURI := fmt.Sprintf("host=%s user=%s dbname=%s sslmode=disable password=%s port=%s", host, user, dbName, password)
+    fmt.Println(dbURI)
     // dbURI := fmt.Sprintf("postgres://obqsbjrxwcyqjq:62e0ead0553e1f53b5a699ae1aa400b82c4626dd76abad4f0a3d74127f9f39c8@ec2-23-20-140-229.compute-1.amazonaws.com:5432/ddblm95hab27e3")
 
 
   // Opening connection to Database
-    db, err = gorm.Open(dialect, "postgres://obqsbjrxwcyqjq:62e0ead0553e1f53b5a699ae1aa400b82c4626dd76abad4f0a3d74127f9f39c8@ec2-23-20-140-229.compute-1.amazonaws.com:5432/ddblm95hab27e3")
+
+    conn, err := gorm.Open(dialect, dbURI)
     if err != nil {
        log.Fatal(err)
     } else {
@@ -73,8 +94,6 @@ func main () {
   //   db.Create(&previousGigs)
   // }
 
-  //Api routes
-  router := mux.NewRouter()
 
 
   //Get Route
@@ -99,8 +118,9 @@ func main () {
   origins := handlers.AllowedOrigins([]string{"*"})
 
   //Connect to server
-  log.Fatal(http.ListenAndServe(":8080", handlers.CORS(headers, methods, origins)(router)))
+  err := http.ListenAndServe(":", + port, router(handlers.CORS(headers, methods, origins))
   }
+
 
   // respondJSON makes the response with payload as json format
   func respondJSON(w http.ResponseWriter, status int, payload interface{}) {
